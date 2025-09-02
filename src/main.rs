@@ -1,6 +1,6 @@
+mod scan;
 
 use std::time::Duration;
-
 use embedded_svc::wifi::{Configuration, AuthMethod};
 use esp_idf_svc::wifi::AsyncWifi;
 use esp_idf_svc::wifi::EspWifi;
@@ -21,6 +21,8 @@ use esp_idf_hal::gpio::PinDriver;
 use embedded_svc::{ http::Method::Post, io::Read};
 use esp_idf_hal::units::*;
 use esp_idf_hal::{ledc::{LedcTimerDriver, config::TimerConfig, LedcDriver}};
+
+use crate::scan::{scan_wifi_with_resources, scan_networks_continuously};
 
 
 
@@ -49,54 +51,96 @@ fn main() {
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_svc::sys::link_patches();
 
-    // Bind the log crate to the ESP Logging facilities
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    log::info!("Hello, world!");
+    log::info!("Starting dual-service ESP32 application...");
 
+    log::info!("Taking peripherals in main...");
     let peripherals = Peripherals::take().unwrap();
-    let sysloop = EspSystemEventLoop::take().unwrap();
+    log::info!("Peripherals taken successfully");
+    
+    log::info!("Taking NVS partition in main...");
+    let nvs = EspDefaultNvsPartition::take().unwrap();
+    log::info!("NVS partition taken successfully");
+    
+    log::info!("Taking system event loop in main...");
+    let sys_loop = EspSystemEventLoop::take().unwrap();
+    log::info!("System event loop taken successfully");
+    
     let timer_service = EspTaskTimerService::new().unwrap();
 
-    let _wifi = wifi(peripherals.modem, sysloop,Some(EspDefaultNvsPartition::take().unwrap()),timer_service).unwrap();
-
-
-    let mut server = EspHttpServer::new(&Default::default()).unwrap();
-
+    log::info!("Setting up LED hardware...");
     let led_timer = peripherals.ledc.timer0;
     let led_timer_driver = LedcTimerDriver::new(led_timer, &TimerConfig::new().frequency(1000.Hz())).unwrap();
-
+    
     let red_channel = Arc::new(Mutex::new(LedcDriver::new(peripherals.ledc.channel0, &led_timer_driver, peripherals.pins.gpio3).unwrap()));
     let green_channel = Arc::new(Mutex::new(LedcDriver::new(peripherals.ledc.channel1, &led_timer_driver, peripherals.pins.gpio4).unwrap()));
     let blue_channel = Arc::new(Mutex::new(LedcDriver::new(peripherals.ledc.channel2, &led_timer_driver, peripherals.pins.gpio5).unwrap()));
-    // Create esp pin handler 
-    //let mut gpio1_pin = PinDriver::output(peripherals.pins.gpio1).unwrap();
 
-    server.fn_handler("/", embedded_svc::http::Method::Get,move |mut req| {
+    log::info!("Setting up WiFi connection for API...");
+    let _wifi_for_api = wifi(peripherals.modem, sys_loop.clone(), Some(nvs), timer_service).unwrap();
+
+    let sys_loop_clone = sys_loop.clone();
+    let red_channel_scanner = red_channel.clone();
+    let green_channel_scanner = green_channel.clone();
+    
+    let _scanner_thread = std::thread::spawn(move || {
+        log::info!("Starting WiFi scanner thread...");
+        scan_networks_continuously(sys_loop_clone, red_channel_scanner, green_channel_scanner);
+    });
+
+    log::info!("Setting up HTTP server...");
+    let mut server = EspHttpServer::new(&Default::default()).unwrap();
+
+    server.fn_handler("/", embedded_svc::http::Method::Get, |req| {
         let mut response = req.into_ok_response().unwrap();
-        response.write("Hello from ESP32-C3".as_bytes()).unwrap();
-        //led_pin.lock().unwrap().toggle().unwrap();
+        let html = r#"
+<!DOCTYPE html>
+<html>
+<head><title>ESP32-C3 WiFi Scanner & LED Controller</title></head>
+<body>
+    <h1>ESP32-C3 Services</h1>
+    <p>WiFi Scanner running in background thread</p>
+    <p>HTTP API ready with LED control</p>
+    <p><a href="/status">Status</a></p>
+    <p>POST to /color with 6-byte hex color (e.g., FF0000 for red)</p>
+</body>
+</html>
+        "#;
+        response.write(html.as_bytes()).unwrap();
         Ok::<_, anyhow::Error>(())
     }).unwrap();
 
-    server.fn_handler("/color", embedded_svc::http::Method::Post,move |mut req| {
-        let mut buffer = [0_u8;6];
+    server.fn_handler("/status", embedded_svc::http::Method::Get, |req| {
+        let mut response = req.into_ok_response().unwrap();
+        let status = "WiFi Scanner: Active\nHTTP API: Active\nLED Controller: Ready";
+        response.write(status.as_bytes()).unwrap();
+        Ok::<_, anyhow::Error>(())
+    }).unwrap();
+
+    server.fn_handler("/color", embedded_svc::http::Method::Post, move |mut req| {
+        let mut buffer = [0_u8; 6];
         req.read_exact(&mut buffer)?;
         let color: Color = std::str::from_utf8(&buffer)?.try_into()?;
-        println!("Color: {:?}", color);
+        log::info!("Setting color: {:?}", color);
+        
         let mut response = req.into_ok_response()?;
-        response.write("Color set".as_bytes())?;
+        response.write("Color set successfully".as_bytes())?;
+        
         red_channel.lock().unwrap().set_duty(color.r as u32).unwrap();
         green_channel.lock().unwrap().set_duty(color.g as u32).unwrap();
         blue_channel.lock().unwrap().set_duty(color.b as u32).unwrap();
+        
         Ok::<_, anyhow::Error>(())
     }).unwrap();
 
-    // create the HTTP server loop
-    loop {
-        std::thread::sleep(Duration::from_secs(1));
-    }
+    log::info!("HTTP server started successfully");
+    log::info!("Both WiFi scanner and HTTP API are now running in parallel");
 
+    loop {
+        std::thread::sleep(Duration::from_secs(5));
+        log::info!("Main thread alive - services running");
+    }
 }
 
 
