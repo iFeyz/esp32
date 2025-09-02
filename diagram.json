@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "author": "iFeyz <latortuesauvage@gmail.com>",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-c3-devkitm-1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": { "flashSize": "16" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_red",
+      "top": 42.35,
+      "left": -153.6,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_green",
+      "top": 138.35,
+      "left": -144,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_blue",
+      "top": 224.75,
+      "left": -28.8,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-rgb-led",
+      "id": "rgb1",
+      "top": 234.4,
+      "left": -104.5,
+      "attrs": { "common": "cathode" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:3", "r_red:1", "green", [] ],
+    [ "esp:4", "r_green:1", "green", [] ],
+    [ "esp:5", "r_blue:1", "green", [] ],
+    [ "r_red:2", "rgb1:R", "green", [ "v0" ] ],
+    [ "r_green:2", "rgb1:G", "green", [ "v0" ] ],
+    [ "r_blue:2", "rgb1:B", "green", [ "v0" ] ],
+    [ "rgb1:COM", "esp:GND.5", "green", [ "v0" ] ]
+  ],
+  "serialMonitor": { "display": "terminal", "convertEol": true },
+  "dependencies": {}
+}

@@ -1,0 +1,19 @@
+[wokwi]
+version = 1
+gdbServerPort = 3333
+elf = "target/riscv32imc-esp-espidf/debug/first-project"
+firmware = "target/riscv32imc-esp-espidf/debug/first-project"
+
+
+[net]
+# This feature allows your ESP32 to connect to a virtual WiFi network.
+# You can use the default "Wokwi-GUEST" network for testing.
+wifi = { "ssid" = "Wokwi-GUEST", "password" = "" }
+
+# This section enables port forwarding.
+# It forwards a local port on Wokwi's simulator to a port on the ESP32.
+# You can access the web server by navigating to the IP address printed
+# in the serial monitor of the simulator. The port is 80 by default.
+[[net.forward]]
+from = "localhost:8080"
+to = "target:80"
