@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "author": "iFeyz <latortuesauvage@gmail.com>",
+  "author": "Arthur",
   "editor": "wokwi",
   "parts": [
     {
@@ -37,18 +37,33 @@
       "top": 234.4,
       "left": -104.5,
       "attrs": { "common": "cathode" }
+    },
+    {
+      "type": "chip-nrf24l01-transceiver",
+      "id": "radio1",
+      "top": -120,
+      "left": 200
     }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
     [ "esp:RX", "$serialMonitor:TX", "", [] ],
+
     [ "esp:3", "r_red:1", "green", [] ],
     [ "esp:4", "r_green:1", "green", [] ],
     [ "esp:5", "r_blue:1", "green", [] ],
     [ "r_red:2", "rgb1:R", "green", [ "v0" ] ],
     [ "r_green:2", "rgb1:G", "green", [ "v0" ] ],
     [ "r_blue:2", "rgb1:B", "green", [ "v0" ] ],
-    [ "rgb1:COM", "esp:GND.5", "green", [ "v0" ] ]
+    [ "rgb1:COM", "esp:GND.5", "black", [ "v0" ] ],
+
+    [ "radio1:VCC", "esp:3V3", "red", ["h0"] ],
+    [ "radio1:GND", "esp:GND.1", "black", ["h0"] ],
+    [ "radio1:CE", "esp:9", "green", ["h0"] ],
+    [ "radio1:CSN", "esp:10", "green", ["h0"] ],
+    [ "radio1:SCK", "esp:6", "green", ["h0"] ],
+    [ "radio1:MOSI", "esp:7", "green", ["h0"] ],
+    [ "radio1:MISO", "esp:2", "green", ["h0"] ]
   ],
   "serialMonitor": { "display": "terminal", "convertEol": true },
   "dependencies": {}

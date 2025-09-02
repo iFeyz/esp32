@@ -30,6 +30,8 @@ anyhow = "1.0.99"
 embedded-svc = "0.28.1"
 esp-idf-hal = "0.45.2"
 heapless = "0.9.1"
+nrf24-rs = "0.2.0"
+embedded-hal = "0.2.7"
 
 # --- Optional Embassy Integration ---
 # esp-idf-svc = { version = "0.51", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }

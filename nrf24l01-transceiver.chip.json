@@ -1,0 +1,22 @@
+{
+    "name": "nrf24l01-transceiver",
+      "author": "",
+    "pins": [
+      "GND",
+      "VCC",
+      "CE",
+      "CSN",
+      "SCK",
+      "MOSI",
+      "MISO",
+      "IRQ",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "controls": []
+  }
